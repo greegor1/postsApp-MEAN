@@ -35,12 +35,15 @@ app.post('/api/posts', (req, res, next) => {
         title: req.body.title,
         content: req.body.content
     }); // post model is a constructor function and allows us to construct new js object
-    post.save(); // save method i provided by mongoose package for every model created with it. 
+    post.save()  // save method i provided by mongoose package for every model created with it. 
                  //It will automaticaly create the right query for our db to insert a new entry with autoamtically generated ID into the DB
                  // the name of the collection will always be the plural form of my model name so if name is Post, my collection name will be posts
-    res.status(201).json({ 
-        message: "Post sent successfully" 
-    })
+        .then(createdPost => {
+            res.status(201).json({ 
+                message: "Post sent successfully",
+                postId: createdPost._id
+            })
+        })
 })
 
 app.get('/api/posts',  (req, res, next) => {
@@ -56,8 +59,11 @@ app.get('/api/posts',  (req, res, next) => {
 })
 
 app.delete("/api/posts/:id", (req, res, next) => {
-    console.log(req.params.id);
-    res.status(200).json({message: 'Post deleted!'})
+    Post.deleteOne({ _id: req.params.id })
+        .then(result => {
+            console.log(result);
+            res.status(200).json({message: 'Post deleted!'})
+        })
 })
 
 module.exports = app;
