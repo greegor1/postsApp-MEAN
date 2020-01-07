@@ -5,4 +5,4 @@ const postSchema = mongoose.Schema({                          // setting just a 
     content: { type: String, require: true }
 });
 
-module.exports = mongoose.model('Post', postSchema);  //this model method gives us is a constructor function
+module.exports = mongoose.model('Post', postSchema);  //what this model method gives us is a constructor function
