@@ -1,15 +1,40 @@
 const express = require("express");
+const multer = require("multer");
 
-const Post = require('../models/post')
+const Post = require('../models/post');
 
 const router = express.Router();
 
-router.post('', (req, res, next) => {
+const MIME_TYPE_MAP = {
+    'image/png': 'png',
+    'image/jpeg': 'jpg',
+    'image/jpg': 'jpg'
+}
+
+const storage = multer.diskStorage({                              // configure the way how multer does store things
+    destination: (req, file, callback) => {                      // function which will be exevuted whenever multer tries to save a file
+        const isValid = MIME_TYPE_MAP[file.mimetype];
+        let error = new Error('Invalid mime type');
+        if (isValid) {
+            error = null
+        }
+        callback(error, "backend/images")
+    },
+    filename: (req, file, callback) => {
+        const name = file.originalname.toLowerCase().split(' ').join('-');
+        const ext = MIME_TYPE_MAP[file.mimetype];
+        callback(null, name + '-' + Date.now() + '.' + ext)
+    }
+})
+
+router.post('', multer({storage: storage}).single("image"), (req, res, next) => {       //this means multer will now try to  extract a single file from the incomin req and will try to find it on an image property in the req body
     //const post = req.body; //this is a new field added by body parser
     // post model created with mongoose will actually be the bridge between nodejs and mongoDB
+    const url = req.protocol + '://' + req.get("host");
     const post = new Post({
         title: req.body.title,
-        content: req.body.content
+        content: req.body.content,
+        imagePath: url + "/images/" + req.file.filename
     }); // post model is a constructor function and allows us to construct new js object
     post.save()  // save method i provided by mongoose package for every model created with it. 
                  //It will automaticaly create the right query for our db to insert a new entry with autoamtically generated ID into the DB
@@ -17,7 +42,10 @@ router.post('', (req, res, next) => {
         .then(createdPost => {
             res.status(201).json({ 
                 message: "Post sent successfully",
-                postId: createdPost._id
+                post: {
+                    ...createdPost,
+                    id: createdPost._id,
+                }
             })
         })
 })
@@ -44,11 +72,17 @@ router.get('/:id', (req, res, next) => {
     })
 })
 
-router.put("/:id", (req, res, next) => {
+router.put("/:id", multer({storage: storage}).single("image"), (req, res, next) => {
+    let imagePath = req.body.imagePath;
+    if (req.file) {
+        const url = req.protocol + '://' + req.get("host");
+        imagePath = url + "/images/" + req.file.filename
+    }
     const post = new Post({
         _id: req.params.id,   //reusing existing id to not try to mute immutable id from DB
         title: req.body.title,
         content: req.body.content,
+        imagePath: imagePath
     })
     Post.updateOne({ _id: req.params.id }, post)  //accessing Post model created with using moongose so we can use updateOne() method provided
         .then(result => {
