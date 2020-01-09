@@ -51,12 +51,27 @@ router.post('', multer({storage: storage}).single("image"), (req, res, next) => 
 })
 
 router.get('',  (req, res, next) => {
-    Post.find()     //will returnn all entries (like in the shell)
+    const pageSize = +req.query.pagesize;
+    const currentPage = +req.query.page;
+    const postQuery = Post.find();
+    let fetchedPosts;
+    if (pageSize && currentPage) {
+        postQuery
+            .skip(pageSize * (currentPage - 1))
+            .limit(pageSize);
+    }
+    postQuery
         .then(documents => {
+            fetchedPosts = documents;
+            return Post.count();
+        })
+        .then(count => {
+
             res.status(200).json({                      // we must execute response code inside then because fetching that data is an asynchronous task
                                                         // if we execute that outside then JS will execute res code before then and we'll get 500
                 message: 'Posts  fetched succesfully',
-                posts: documents
+                posts: fetchedPosts,
+                maxPosts: count
             });
         })          // we dont wanna use callback in find() because we can easly end up in callback hell, and that's why we chain a then block
                     // find doesn't return promise, but object which has a then block that behaves similarly
